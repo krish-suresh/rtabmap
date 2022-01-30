@@ -216,6 +216,7 @@ bool Memory::init(const std::string & dbUrl, bool dbOverwritten, const Parameter
 
 void Memory::loadDataFromDb(bool postInitClosingEvents)
 {
+	std::cout << "DB import" << "\n";
 	if(_dbDriver && _dbDriver->isConnected())
 	{
 		bool loadAllNodesInWM = Parameters::defaultMemInitWMWithAllNodes();
@@ -256,6 +257,15 @@ void Memory::loadDataFromDb(bool postInitClosingEvents)
 				if(!(*iter)->getLandmarks().empty())
 				{
 					// Update landmark indexes
+					std::cout.precision(17);
+					std::cout << (*iter)->getLandmarks().size()<<"\n";
+					std::cout << "Pose:"<<(*iter)->getPose().prettyPrint()<<"\n";
+					std::cout << (*iter)->getLabel() << " | " << (*iter)->getStamp() << "\n";
+					for (std::map<int, Link>::const_iterator it=(*iter)->getLandmarks().begin(); it!=(*iter)->getLandmarks().end(); ++it) {
+						std::cout << "landmark: "<<it->first << " | " <<it->second.transform().prettyPrint() << "\n";
+						std::cout << "sub pose: "<<it->first << " | " <<(it->second.transform()*(*iter)->getPose()).prettyPrint() << "\n";
+					}
+					
 					for(std::map<int, Link>::const_iterator jter = (*iter)->getLandmarks().begin(); jter!=(*iter)->getLandmarks().end(); ++jter)
 					{
 						int landmarkId = jter->first;

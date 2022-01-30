@@ -90,7 +90,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QSplashScreen>
 #include <QInputDialog>
 #include <QToolButton>
-
+#include <fstream>
 //RGB-D stuff
 #include "rtabmap/core/CameraRGBD.h"
 #include "rtabmap/core/Odometry.h"
@@ -4858,8 +4858,14 @@ void MainWindow::drawKeypoints(const std::multimap<int, cv::KeyPoint> & refWords
 
 void MainWindow::drawLandmarks(cv::Mat & image, const Signature & signature)
 {
+	std::ofstream file("/home/ksuresh/Desktop/markers.txt", std::ios_base::app);
+	file << "----" << "\n";
 	for(std::map<int, Link>::const_iterator iter=signature.getLandmarks().begin(); iter!=signature.getLandmarks().end(); ++iter)
 	{
+		Transform tr = iter->second.transform();
+		// file << tr.prettyPrint() << "\n";
+		// std::cout <<  tr.prettyPrint() << "\n";
+		
 		CameraModel model;
 		if(!signature.sensorData().cameraModels().empty() &&
 			signature.sensorData().cameraModels()[0].isValidForProjection())
@@ -4880,7 +4886,7 @@ void MainWindow::drawLandmarks(cv::Mat & image, const Signature & signature)
 			cv::Mat R;
 			t.rotationMatrix().convertTo(R, CV_64F);
 			cv::Rodrigues(R, rvec);
-
+			std::cout << iter->first <<" | " <<tvec.val[0]<<","<<tvec.val[1]<<","<<tvec.val[2]<<","<< " | "<<rvec.val[0]<<","<<rvec.val[1]<<","<<rvec.val[2]<<"\n";
 			//cv::aruco::drawAxis(image, model.K(), model.D(), rvec, tvec, _preferencesDialog->getMarkerLength()<=0?0.1:_preferencesDialog->getMarkerLength() * 0.5f);
 
 			// project axis points
@@ -4899,6 +4905,7 @@ void MainWindow::drawLandmarks(cv::Mat & image, const Signature & signature)
 			cv::putText(image, uNumber2Str(-iter->first), imagePoints[0], cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(0, 255, 255), 2);
 		}
 	}
+	file.close();
 }
 
 void MainWindow::showEvent(QShowEvent* anEvent)
@@ -5899,6 +5906,7 @@ void MainWindow::exportPosesG2O()
 
 void MainWindow::exportPoses(int format)
 {
+	_cachedSignatures.size();
 	if(_currentPosesMap.size())
 	{
 		std::map<int, Transform> localTransforms;
@@ -6003,13 +6011,19 @@ void MainWindow::exportPoses(int format)
 				}
 			}
 		}
-
+		ULOGGER_WARN("Before landmark");
+		std::cout << poses.size()<<"\n";
+  		for (std::map<int, Transform>::iterator it=poses.begin(); it!=poses.end(); ++it) {
+			std::cout <<it->first << " | " <<it->second.prettyPrint() << "\n";
+		}
+		
 		if(format != 4 && !poses.empty() && poses.begin()->first<0) // not g2o, landmark not supported
 		{
 			UWARN("Only g2o format (4) can export landmarks, they are ignored with format %d", format);
 			std::map<int, Transform>::iterator iter=poses.begin();
 			while(iter!=poses.end() && iter->first < 0)
 			{
+				std::cout <<iter->second.prettyPrint() << "\n";
 				poses.erase(iter++);
 			}
 		}
