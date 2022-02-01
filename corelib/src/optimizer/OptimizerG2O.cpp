@@ -1913,26 +1913,26 @@ bool OptimizerG2O::saveGraph(
 		// force periods to be used instead of commas
 		setlocale(LC_ALL, "en_US.UTF-8");
 
-		if(isSlam2d())
-		{
-			// PARAMS_SE2OFFSET id x y theta (set for priors)
-			fprintf(file, "PARAMS_SE2OFFSET %d 0 0 0\n", PARAM_OFFSET);
-		}
-		else
-		{
-			// PARAMS_SE3OFFSET id x y z qw qx qy qz (set for priors)
-			Eigen::Vector3f v = Eigen::Vector3f::Zero();
-			Eigen::Quaternionf q = Eigen::Quaternionf::Identity();
-			fprintf(file, "PARAMS_SE3OFFSET %d %f %f %f %f %f %f %f\n",
-				PARAM_OFFSET,
-				v.x(),
-				v.y(),
-				v.z(),
-				q.x(),
-				q.y(),
-				q.z(),
-				q.w());
-		}
+		// if(isSlam2d())
+		// {
+		// 	// PARAMS_SE2OFFSET id x y theta (set for priors)
+		// 	fprintf(file, "PARAMS_SE2OFFSET %d 0 0 0\n", PARAM_OFFSET);
+		// }
+		// else
+		// {
+		// 	// PARAMS_SE3OFFSET id x y z qw qx qy qz (set for priors)
+		// 	Eigen::Vector3f v = Eigen::Vector3f::Zero();
+		// 	Eigen::Quaternionf q = Eigen::Quaternionf::Identity();
+		// 	fprintf(file, "PARAMS_SE3OFFSET %d %f %f %f %f %f %f %f\n",
+		// 		PARAM_OFFSET,
+		// 		v.x(),
+		// 		v.y(),
+		// 		v.z(),
+		// 		q.x(),
+		// 		q.y(),
+		// 		q.z(),
+		// 		q.w());
+		// }
 
 		int landmarkOffset = poses.size()&&poses.rbegin()->first>0?poses.rbegin()->first+1:0;
 		for(std::map<int, Transform>::const_iterator iter = poses.begin(); iter!=poses.end(); ++iter)
@@ -1959,12 +1959,27 @@ bool OptimizerG2O::saveGraph(
 			}
 			else
 			{
+				std::cout<<iter->first<<"\n";
 				if(iter->first > 0)
 				{
 					// VERTEX_SE3 id x y z qw qx qy qz
+					// Eigen::Quaternionf q = iter->second.getQuaternionf();
+					// fprintf(file, "VERTEX_SE3:QUAT %d %f %f %f %f %f %f %f\n",
+					// 	iter->first,
+					// 	iter->second.x(),
+					// 	iter->second.y(),
+					// 	iter->second.z(),
+					// 	q.x(),
+					// 	q.y(),
+					// 	q.z(),
+					// 	q.w());
+				}
+				else if(!landmarksIgnored())
+				{
+					// VERTEX_TRACKXYZ id x y z
 					Eigen::Quaternionf q = iter->second.getQuaternionf();
-					fprintf(file, "VERTEX_SE3:QUAT %d %f %f %f %f %f %f %f\n",
-						iter->first,
+					fprintf(file, "MARKER %d %f %f %f %f %f %f %f\n",
+						-iter->first,
 						iter->second.x(),
 						iter->second.y(),
 						iter->second.z(),
@@ -1973,218 +1988,209 @@ bool OptimizerG2O::saveGraph(
 						q.z(),
 						q.w());
 				}
-				else if(!landmarksIgnored())
-				{
-					// VERTEX_TRACKXYZ id x y z
-					fprintf(file, "VERTEX_TRACKXYZ %d %f %f %f\n",
-						landmarkOffset-iter->first,
-						iter->second.x(),
-						iter->second.y(),
-						iter->second.z());
-				}
 			}
 		}
 
-		int virtualVertexId = landmarkOffset - (poses.size()&&poses.rbegin()->first<0?poses.rbegin()->first:0);
-		for(std::multimap<int, Link>::const_iterator iter = edgeConstraints.begin(); iter!=edgeConstraints.end(); ++iter)
-		{
-			if (iter->second.type() == Link::kLandmark)
-			{
-				if (this->landmarksIgnored())
-				{
-					continue;
-				}
-				if(isSlam2d())
-				{
-					// EDGE_SE2_XY observed_vertex_id observing_vertex_id x y inf_11 inf_12 inf_22
-					fprintf(file, "EDGE_SE2_XY %d %d %f %f %f %f %f\n",
-						iter->second.from()<0?landmarkOffset-iter->second.from():iter->second.from(),
-						iter->second.to()<0?landmarkOffset-iter->second.to():iter->second.to(),
-						iter->second.transform().x(),
-						iter->second.transform().y(),
-						iter->second.infMatrix().at<double>(0, 0),
-						iter->second.infMatrix().at<double>(0, 1),
-						iter->second.infMatrix().at<double>(1, 1));
-				}
-				else
-				{
-					// EDGE_SE3_TRACKXYZ observed_vertex_id observing_vertex_id param_offset x y z inf_11 inf_12 inf_13 inf_22 inf_23 inf_33
-					fprintf(file, "EDGE_SE3_TRACKXYZ %d %d %d %f %f %f %f %f %f %f %f %f\n",
-						iter->second.from()<0?landmarkOffset-iter->second.from():iter->second.from(),
-						iter->second.to()<0?landmarkOffset-iter->second.to():iter->second.to(),
-						PARAM_OFFSET,
-						iter->second.transform().x(),
-						iter->second.transform().y(),
-						iter->second.transform().z(),
-						iter->second.infMatrix().at<double>(0, 0),
-						iter->second.infMatrix().at<double>(0, 1),
-						iter->second.infMatrix().at<double>(0, 2),
-						iter->second.infMatrix().at<double>(1, 1),
-						iter->second.infMatrix().at<double>(1, 2),
-						iter->second.infMatrix().at<double>(2, 2));
-				}
-				continue;
-			}
+		// int virtualVertexId = landmarkOffset - (poses.size()&&poses.rbegin()->first<0?poses.rbegin()->first:0);
+		// for(std::multimap<int, Link>::const_iterator iter = edgeConstraints.begin(); iter!=edgeConstraints.end(); ++iter)
+		// {
+		// 	if (iter->second.type() == Link::kLandmark)
+		// 	{
+		// 		if (this->landmarksIgnored())
+		// 		{
+		// 			continue;
+		// 		}
+		// 		if(isSlam2d())
+		// 		{
+		// 			// EDGE_SE2_XY observed_vertex_id observing_vertex_id x y inf_11 inf_12 inf_22
+		// 			fprintf(file, "EDGE_SE2_XY %d %d %f %f %f %f %f\n",
+		// 				iter->second.from()<0?landmarkOffset-iter->second.from():iter->second.from(),
+		// 				iter->second.to()<0?landmarkOffset-iter->second.to():iter->second.to(),
+		// 				iter->second.transform().x(),
+		// 				iter->second.transform().y(),
+		// 				iter->second.infMatrix().at<double>(0, 0),
+		// 				iter->second.infMatrix().at<double>(0, 1),
+		// 				iter->second.infMatrix().at<double>(1, 1));
+		// 		}
+		// 		else
+		// 		{
+		// 			// EDGE_SE3_TRACKXYZ observed_vertex_id observing_vertex_id param_offset x y z inf_11 inf_12 inf_13 inf_22 inf_23 inf_33
+		// 			fprintf(file, "EDGE_SE3_TRACKXYZ %d %d %d %f %f %f %f %f %f %f %f %f\n",
+		// 				iter->second.from()<0?landmarkOffset-iter->second.from():iter->second.from(),
+		// 				iter->second.to()<0?landmarkOffset-iter->second.to():iter->second.to(),
+		// 				PARAM_OFFSET,
+		// 				iter->second.transform().x(),
+		// 				iter->second.transform().y(),
+		// 				iter->second.transform().z(),
+		// 				iter->second.infMatrix().at<double>(0, 0),
+		// 				iter->second.infMatrix().at<double>(0, 1),
+		// 				iter->second.infMatrix().at<double>(0, 2),
+		// 				iter->second.infMatrix().at<double>(1, 1),
+		// 				iter->second.infMatrix().at<double>(1, 2),
+		// 				iter->second.infMatrix().at<double>(2, 2));
+		// 		}
+		// 		continue;
+		// 	}
 
-			std::string prefix = isSlam2d()? "EDGE_SE2" :"EDGE_SE3:QUAT";
-			std::string suffix = "";
-			std::string to = uFormat(" %d", iter->second.to());
+		// 	std::string prefix = isSlam2d()? "EDGE_SE2" :"EDGE_SE3:QUAT";
+		// 	std::string suffix = "";
+		// 	std::string to = uFormat(" %d", iter->second.to());
 
-			bool isSE2 = true;
-			bool isSE3 = true;
+		// 	bool isSE2 = true;
+		// 	bool isSE3 = true;
 
-			if (iter->second.type() == Link::kGravity)
-			{
-				continue;
-			}
-			else if (iter->second.type() == Link::kPosePrior)
-			{
-				if (this->priorsIgnored())
-				{
-					continue;
-				}
-				if (isSlam2d())
-				{
-					if (1 / static_cast<double>(iter->second.infMatrix().at<double>(5,5)) >= 9999.0)
-					{
-						prefix = "EDGE_PRIOR_SE2_XY";
-						isSE2 = false;
-					}
-					else
-					{
-						prefix = "EDGE_PRIOR_SE2";
-					}
+		// 	if (iter->second.type() == Link::kGravity)
+		// 	{
+		// 		continue;
+		// 	}
+		// 	else if (iter->second.type() == Link::kPosePrior)
+		// 	{
+		// 		if (this->priorsIgnored())
+		// 		{
+		// 			continue;
+		// 		}
+		// 		if (isSlam2d())
+		// 		{
+		// 			if (1 / static_cast<double>(iter->second.infMatrix().at<double>(5,5)) >= 9999.0)
+		// 			{
+		// 				prefix = "EDGE_PRIOR_SE2_XY";
+		// 				isSE2 = false;
+		// 			}
+		// 			else
+		// 			{
+		// 				prefix = "EDGE_PRIOR_SE2";
+		// 			}
 
-					//  based on https://github.com/RainerKuemmerle/g2o/blob/38347944c6ad7a3b31976b97406ff0de20be1530/g2o/types/slam2d/edge_se2_prior.cpp#L42
-					//  there is no pid for the 2d prior case
-					to = "";
-				}
-				else
-				{
-					if (1 / static_cast<double>(iter->second.infMatrix().at<double>(3,3)) >= 9999.0 ||
-						1 / static_cast<double>(iter->second.infMatrix().at<double>(4,4)) >= 9999.0 ||
-						1 / static_cast<double>(iter->second.infMatrix().at<double>(5,5)) >= 9999.0)
-					{
-						to = "";
-						prefix = "EDGE_POINTXYZ_PRIOR";
-						isSE3 = false;
-					}
-					else
-					{
-						to = uFormat(" %d", PARAM_OFFSET);
-						prefix = "EDGE_SE3_PRIOR";
-					}
-				}
-			}
-			else if(this->isRobust() &&
-			   iter->second.type() != Link::kNeighbor &&
-			   iter->second.type() != Link::kNeighborMerged)
-			{
-				fprintf(file, "VERTEX_SWITCH %d 1\n", virtualVertexId);
-				fprintf(file, "EDGE_SWITCH_PRIOR %d 1 1.0\n", virtualVertexId);
-				prefix = isSlam2d() ? "EDGE_SE2_SWITCHABLE" : "EDGE_SE3_SWITCHABLE";
-				suffix = uFormat(" %d", virtualVertexId++);
-			}
+		// 			//  based on https://github.com/RainerKuemmerle/g2o/blob/38347944c6ad7a3b31976b97406ff0de20be1530/g2o/types/slam2d/edge_se2_prior.cpp#L42
+		// 			//  there is no pid for the 2d prior case
+		// 			to = "";
+		// 		}
+		// 		else
+		// 		{
+		// 			if (1 / static_cast<double>(iter->second.infMatrix().at<double>(3,3)) >= 9999.0 ||
+		// 				1 / static_cast<double>(iter->second.infMatrix().at<double>(4,4)) >= 9999.0 ||
+		// 				1 / static_cast<double>(iter->second.infMatrix().at<double>(5,5)) >= 9999.0)
+		// 			{
+		// 				to = "";
+		// 				prefix = "EDGE_POINTXYZ_PRIOR";
+		// 				isSE3 = false;
+		// 			}
+		// 			else
+		// 			{
+		// 				to = uFormat(" %d", PARAM_OFFSET);
+		// 				prefix = "EDGE_SE3_PRIOR";
+		// 			}
+		// 		}
+		// 	}
+		// 	else if(this->isRobust() &&
+		// 	   iter->second.type() != Link::kNeighbor &&
+		// 	   iter->second.type() != Link::kNeighborMerged)
+		// 	{
+		// 		fprintf(file, "VERTEX_SWITCH %d 1\n", virtualVertexId);
+		// 		fprintf(file, "EDGE_SWITCH_PRIOR %d 1 1.0\n", virtualVertexId);
+		// 		prefix = isSlam2d() ? "EDGE_SE2_SWITCHABLE" : "EDGE_SE3_SWITCHABLE";
+		// 		suffix = uFormat(" %d", virtualVertexId++);
+		// 	}
 
-			if(isSlam2d())
-			{
-				if (isSE2)
-				{
-					// EDGE_SE2 observed_vertex_id observing_vertex_id x y qx qy qz qw inf_11 inf_12 inf_13 inf_22 inf_23 inf_33
-					// EDGE_SE2_PRIOR observed_vertex_id x y qx qy qz qw inf_11 inf_12 inf_13 inf_22 inf_23 inf_33
-					fprintf(file, "%s %d%s%s %f %f %f %f %f %f %f %f %f\n",
-        					prefix.c_str(),
-        					iter->second.from(),
-        					to.c_str(),
-        					suffix.c_str(),
-        					iter->second.transform().x(),
-        					iter->second.transform().y(),
-        					iter->second.transform().theta(),
-        					iter->second.infMatrix().at<double>(0, 0),
-        					iter->second.infMatrix().at<double>(0, 1),
-        					iter->second.infMatrix().at<double>(0, 5),
-        					iter->second.infMatrix().at<double>(1, 1),
-        					iter->second.infMatrix().at<double>(1, 5),
-        					iter->second.infMatrix().at<double>(5, 5));
-				}
-				else
-				{
-					// EDGE_XY observed_vertex_id observing_vertex_id x y inf_11 inf_12 inf_22
-					// EDGE_POINTXY_PRIOR x y inf_11 inf_12 inf_22
-					fprintf(file, "%s %d%s%s %f %f %f %f %f\n",
-        					prefix.c_str(),
-        					iter->second.from(),
-        					to.c_str(),
-        					suffix.c_str(),
-        					iter->second.transform().x(),
-        					iter->second.transform().y(),
-        					iter->second.infMatrix().at<double>(0, 0),
-        					iter->second.infMatrix().at<double>(0, 1),
-        					iter->second.infMatrix().at<double>(1, 1));
-				}
-			}
-			else
-			{
-				if (isSE3)
-				{
-					// EDGE_SE3 observed_vertex_id observing_vertex_id x y z qx qy qz qw inf_11 inf_12 .. inf_16 inf_22 .. inf_66
-					// EDGE_SE3_PRIOR observed_vertex_id offset_parameter_id x y z qx qy qz qw inf_11 inf_12 .. inf_16 inf_22 .. inf_66
-					Eigen::Quaternionf q = iter->second.transform().getQuaternionf();
-					fprintf(file, "%s %d%s%s %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f\n",
-        					prefix.c_str(),
-        					iter->second.from(),
-        					to.c_str(),
-        					suffix.c_str(),
-        					iter->second.transform().x(),
-        					iter->second.transform().y(),
-        					iter->second.transform().z(),
-        					q.x(),
-        					q.y(),
-        					q.z(),
-        					q.w(),
-        					iter->second.infMatrix().at<double>(0, 0),
-        					iter->second.infMatrix().at<double>(0, 1),
-        					iter->second.infMatrix().at<double>(0, 2),
-        					iter->second.infMatrix().at<double>(0, 3),
-        					iter->second.infMatrix().at<double>(0, 4),
-        					iter->second.infMatrix().at<double>(0, 5),
-        					iter->second.infMatrix().at<double>(1, 1),
-        					iter->second.infMatrix().at<double>(1, 2),
-        					iter->second.infMatrix().at<double>(1, 3),
-        					iter->second.infMatrix().at<double>(1, 4),
-        					iter->second.infMatrix().at<double>(1, 5),
-        					iter->second.infMatrix().at<double>(2, 2),
-        					iter->second.infMatrix().at<double>(2, 3),
-        					iter->second.infMatrix().at<double>(2, 4),
-        					iter->second.infMatrix().at<double>(2, 5),
-        					iter->second.infMatrix().at<double>(3, 3),
-        					iter->second.infMatrix().at<double>(3, 4),
-        					iter->second.infMatrix().at<double>(3, 5),
-        					iter->second.infMatrix().at<double>(4, 4),
-        					iter->second.infMatrix().at<double>(4, 5),
-        					iter->second.infMatrix().at<double>(5, 5));
-				}
-				else
-				{
-					// EDGE_XYZ observed_vertex_id observing_vertex_id x y z qx qy qz qw inf_11 inf_12 .. inf_13 inf_22 .. inf_33
-					// EDGE_POINTXYZ_PRIOR observed_vertex_id x y z inf_11 inf_12 .. inf_13 inf_22 .. inf_33
-					fprintf(file, "%s %d%s%s %f %f %f %f %f %f %f %f %f\n",
-        					prefix.c_str(),
-        					iter->second.from(),
-        					to.c_str(),
-        					suffix.c_str(),
-        					iter->second.transform().x(),
-        					iter->second.transform().y(),
-        					iter->second.transform().z(),
-        					iter->second.infMatrix().at<double>(0, 0),
-        					iter->second.infMatrix().at<double>(0, 1),
-        					iter->second.infMatrix().at<double>(0, 2),
-        					iter->second.infMatrix().at<double>(1, 1),
-        					iter->second.infMatrix().at<double>(1, 2),
-        					iter->second.infMatrix().at<double>(2, 2));
-				}
-			}
-		}
+		// 	if(isSlam2d())
+		// 	{
+		// 		if (isSE2)
+		// 		{
+		// 			// EDGE_SE2 observed_vertex_id observing_vertex_id x y qx qy qz qw inf_11 inf_12 inf_13 inf_22 inf_23 inf_33
+		// 			// EDGE_SE2_PRIOR observed_vertex_id x y qx qy qz qw inf_11 inf_12 inf_13 inf_22 inf_23 inf_33
+		// 			fprintf(file, "%s %d%s%s %f %f %f %f %f %f %f %f %f\n",
+        // 					prefix.c_str(),
+        // 					iter->second.from(),
+        // 					to.c_str(),
+        // 					suffix.c_str(),
+        // 					iter->second.transform().x(),
+        // 					iter->second.transform().y(),
+        // 					iter->second.transform().theta(),
+        // 					iter->second.infMatrix().at<double>(0, 0),
+        // 					iter->second.infMatrix().at<double>(0, 1),
+        // 					iter->second.infMatrix().at<double>(0, 5),
+        // 					iter->second.infMatrix().at<double>(1, 1),
+        // 					iter->second.infMatrix().at<double>(1, 5),
+        // 					iter->second.infMatrix().at<double>(5, 5));
+		// 		}
+		// 		else
+		// 		{
+		// 			// EDGE_XY observed_vertex_id observing_vertex_id x y inf_11 inf_12 inf_22
+		// 			// EDGE_POINTXY_PRIOR x y inf_11 inf_12 inf_22
+		// 			fprintf(file, "%s %d%s%s %f %f %f %f %f\n",
+        // 					prefix.c_str(),
+        // 					iter->second.from(),
+        // 					to.c_str(),
+        // 					suffix.c_str(),
+        // 					iter->second.transform().x(),
+        // 					iter->second.transform().y(),
+        // 					iter->second.infMatrix().at<double>(0, 0),
+        // 					iter->second.infMatrix().at<double>(0, 1),
+        // 					iter->second.infMatrix().at<double>(1, 1));
+		// 		}
+		// 	}
+		// 	else
+		// 	{
+		// 		if (isSE3)
+		// 		{
+		// 			// EDGE_SE3 observed_vertex_id observing_vertex_id x y z qx qy qz qw inf_11 inf_12 .. inf_16 inf_22 .. inf_66
+		// 			// EDGE_SE3_PRIOR observed_vertex_id offset_parameter_id x y z qx qy qz qw inf_11 inf_12 .. inf_16 inf_22 .. inf_66
+		// 			Eigen::Quaternionf q = iter->second.transform().getQuaternionf();
+		// 			fprintf(file, "%s %d%s%s %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f\n",
+        // 					prefix.c_str(),
+        // 					iter->second.from(),
+        // 					to.c_str(),
+        // 					suffix.c_str(),
+        // 					iter->second.transform().x(),
+        // 					iter->second.transform().y(),
+        // 					iter->second.transform().z(),
+        // 					q.x(),
+        // 					q.y(),
+        // 					q.z(),
+        // 					q.w(),
+        // 					iter->second.infMatrix().at<double>(0, 0),
+        // 					iter->second.infMatrix().at<double>(0, 1),
+        // 					iter->second.infMatrix().at<double>(0, 2),
+        // 					iter->second.infMatrix().at<double>(0, 3),
+        // 					iter->second.infMatrix().at<double>(0, 4),
+        // 					iter->second.infMatrix().at<double>(0, 5),
+        // 					iter->second.infMatrix().at<double>(1, 1),
+        // 					iter->second.infMatrix().at<double>(1, 2),
+        // 					iter->second.infMatrix().at<double>(1, 3),
+        // 					iter->second.infMatrix().at<double>(1, 4),
+        // 					iter->second.infMatrix().at<double>(1, 5),
+        // 					iter->second.infMatrix().at<double>(2, 2),
+        // 					iter->second.infMatrix().at<double>(2, 3),
+        // 					iter->second.infMatrix().at<double>(2, 4),
+        // 					iter->second.infMatrix().at<double>(2, 5),
+        // 					iter->second.infMatrix().at<double>(3, 3),
+        // 					iter->second.infMatrix().at<double>(3, 4),
+        // 					iter->second.infMatrix().at<double>(3, 5),
+        // 					iter->second.infMatrix().at<double>(4, 4),
+        // 					iter->second.infMatrix().at<double>(4, 5),
+        // 					iter->second.infMatrix().at<double>(5, 5));
+		// 		}
+		// 		else
+		// 		{
+		// 			// EDGE_XYZ observed_vertex_id observing_vertex_id x y z qx qy qz qw inf_11 inf_12 .. inf_13 inf_22 .. inf_33
+		// 			// EDGE_POINTXYZ_PRIOR observed_vertex_id x y z inf_11 inf_12 .. inf_13 inf_22 .. inf_33
+		// 			fprintf(file, "%s %d%s%s %f %f %f %f %f %f %f %f %f\n",
+        // 					prefix.c_str(),
+        // 					iter->second.from(),
+        // 					to.c_str(),
+        // 					suffix.c_str(),
+        // 					iter->second.transform().x(),
+        // 					iter->second.transform().y(),
+        // 					iter->second.transform().z(),
+        // 					iter->second.infMatrix().at<double>(0, 0),
+        // 					iter->second.infMatrix().at<double>(0, 1),
+        // 					iter->second.infMatrix().at<double>(0, 2),
+        // 					iter->second.infMatrix().at<double>(1, 1),
+        // 					iter->second.infMatrix().at<double>(1, 2),
+        // 					iter->second.infMatrix().at<double>(2, 2));
+		// 		}
+		// 	}
+		// }
 		UINFO("Graph saved to %s", fileName.c_str());
 
 		fclose(file);

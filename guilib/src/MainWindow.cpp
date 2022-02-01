@@ -5909,6 +5909,10 @@ void MainWindow::exportPoses(int format)
 	_cachedSignatures.size();
 	if(_currentPosesMap.size())
 	{
+		ULOGGER_WARN("Start");
+		for (std::map<int, Transform>::iterator iter=_currentPosesMap.begin(); iter!=_currentPosesMap.end(); ++iter) {
+			std::cout<< iter->first <<" | "<<iter->second.prettyPrint() << "\n";
+		}
 		std::map<int, Transform> localTransforms;
 		QStringList items;
 		items.push_back("Robot (base frame)");
@@ -5924,7 +5928,7 @@ void MainWindow::exportPoses(int format)
 		{
 			bool cameraFrame = item.compare("Camera") == 0;
 			_exportPosesFrame = cameraFrame?1:2;
-			for(std::map<int, Transform>::iterator iter=_currentPosesMap.lower_bound(1); iter!=_currentPosesMap.end(); ++iter)
+			for(std::map<int, Transform>::iterator iter=_currentPosesMap.begin(); iter!=_currentPosesMap.end(); ++iter)
 			{
 				if(_cachedSignatures.contains(iter->first))
 				{
@@ -5985,13 +5989,16 @@ void MainWindow::exportPoses(int format)
 		{
 			_exportPosesFrame = 0;
 		}
-
+		ULOGGER_WARN("1");
+		for (std::map<int, Transform>::iterator iter=_currentPosesMap.begin(); iter!=_currentPosesMap.end(); ++iter) {
+			std::cout<< iter->first <<" | "<<iter->second.prettyPrint() << "\n";
+		}
 		std::map<int, Transform> poses;
 		std::multimap<int, Link> links;
 		if(localTransforms.empty())
 		{
-			poses = std::map<int, Transform>(_currentPosesMap.lower_bound(1), _currentPosesMap.end());
-			links = std::multimap<int, Link>(_currentLinksMap.lower_bound(1), _currentLinksMap.end());
+			poses = std::map<int, Transform>(_currentPosesMap.begin(), _currentPosesMap.end());
+			links = std::multimap<int, Link>(_currentLinksMap.begin(), _currentLinksMap.end());
 		}
 		else
 		{
@@ -6000,7 +6007,7 @@ void MainWindow::exportPoses(int format)
 			{
 				poses.insert(std::make_pair(iter->first, _currentPosesMap.at(iter->first) * iter->second));
 			}
-			for(std::multimap<int, Link>::iterator iter=_currentLinksMap.lower_bound(1); iter!=_currentLinksMap.end(); ++iter)
+			for(std::multimap<int, Link>::iterator iter=_currentLinksMap.begin(); iter!=_currentLinksMap.end(); ++iter)
 			{
 				if(uContains(poses, iter->second.from()) && uContains(poses, iter->second.to()))
 				{
@@ -6074,7 +6081,11 @@ void MainWindow::exportPoses(int format)
 					path += ".txt";
 				}
 			}
-
+			ULOGGER_WARN("Before export");
+			std::cout << poses.size()<<"\n";
+			for (std::map<int, Transform>::iterator it=poses.begin(); it!=poses.end(); ++it) {
+				std::cout <<it->first << " | " <<it->second.prettyPrint() << "\n";
+			}
 			_exportPosesFileName[format] = path;
 			bool saved = graph::exportPoses(path.toStdString(), format, poses, links, stamps, _preferencesDialog->getAllParameters());
 

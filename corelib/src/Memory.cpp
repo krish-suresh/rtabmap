@@ -263,7 +263,7 @@ void Memory::loadDataFromDb(bool postInitClosingEvents)
 					std::cout << (*iter)->getLabel() << " | " << (*iter)->getStamp() << "\n";
 					for (std::map<int, Link>::const_iterator it=(*iter)->getLandmarks().begin(); it!=(*iter)->getLandmarks().end(); ++it) {
 						std::cout << "landmark: "<<it->first << " | " <<it->second.transform().prettyPrint() << "\n";
-						std::cout << "sub pose: "<<it->first << " | " <<(it->second.transform()*(*iter)->getPose()).prettyPrint() << "\n";
+						std::cout << "sub pose: "<<it->first << " | " <<(it->second.transform().inverse()*(*iter)->getPose()).prettyPrint() << "\n";
 					}
 					
 					for(std::map<int, Link>::const_iterator jter = (*iter)->getLandmarks().begin(); jter!=(*iter)->getLandmarks().end(); ++jter)
